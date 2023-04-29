@@ -1,4 +1,7 @@
 var getPixels = require("get-pixels");
+const { PNG } = require('pngjs');
+const stream = require('stream');
+
 import { Canvas, CanvasRenderingContext2D } from 'canvas';
 
 export default async function handler(req, res) {
@@ -34,50 +37,40 @@ export default async function handler(req, res) {
         .catch((error) => {
             console.error("Error getting image dimensions:", error);
         });
-    
+
     res.status(200).json({ result: response.data.data, croppedImage: croppedDataURL });
 }
 
 async function urlImage2PixelMatrix(url) {
     return new Promise((resolve, reject) => {
         getPixels(url, function (err, pixels) {
-        if (err) {
-            console.log("Bad image path");
-            reject(err);
-            return;
-        }
-        console.log("got pixels", pixels.shape.slice());
-        let data = pixels.data;
-        let matrix = new Array(256);
-        for (let i = 0; i < 256; i++) {
-            matrix[i] = new Array(256);
-        }
-
-        let dataIndex = 0;
-        for (let i = 0; i < 256; i++) {
-            for (let j = 0; j < 256; j++) {
-            matrix[i][j] = [data[dataIndex],
-                data[dataIndex + 1],
-                data[dataIndex + 2],
-                data[dataIndex + 3],
-            ];
-            dataIndex += 4;
+            if (err) {
+                console.log("Bad image path");
+                reject(err);
+                return;
             }
-        }
-        resolve(matrix);
+            console.log("got pixels", pixels.shape.slice());
+            let data = pixels.data;
+            let matrix = new Array(256);
+            for (let i = 0; i < 256; i++) {
+                matrix[i] = new Array(256);
+            }
+
+            let dataIndex = 0;
+            for (let i = 0; i < 256; i++) {
+                for (let j = 0; j < 256; j++) {
+                    matrix[i][j] = [data[dataIndex],
+                    data[dataIndex + 1],
+                    data[dataIndex + 2],
+                    data[dataIndex + 3],
+                    ];
+                    dataIndex += 4;
+                }
+            }
+            resolve(matrix);
         });
     });
 }
-
-async function toMusk(matrix, x, y, width, height) {
-    let musk = [...matrix];
-    for (let i = y; i < y + height; i++) {
-        for (let j = x; j < x + width; j++) {
-        musk[i][j] = [0, 0, 0, 0];
-        }
-    }
-    return musk;
-}; 
 
 function getCropDimensions(type, width, height) {
     let cropWidth = width; // the width of the croped image
